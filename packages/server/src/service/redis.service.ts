@@ -56,6 +56,18 @@ export class RedisService {
     return this.redis.get(key)
   }
 
+  /**
+   * Atomically read and remove a string value. The Lua fallback keeps this
+   * compatible with Redis/KeyDB versions that do not provide GETDEL.
+   */
+  public getdel(key: string): Promise<string | null> {
+    return this.redis.eval(
+      "local value = redis.call('GET', KEYS[1]); if value then redis.call('DEL', KEYS[1]); end; return value",
+      1,
+      key
+    ) as Promise<string | null>
+  }
+
   public async getInt(key: string, defaultValue = 0): Promise<number> {
     const result = await this.get(key)
 

@@ -40,6 +40,8 @@ declare global {
       enableGoogleFonts?: boolean | string
       disableLoginWithApple?: boolean | string
       disableLoginWithGoogle?: boolean | string
+      disableLoginWithOidc?: boolean | string
+      oidcDisplayName?: string
       verifyUserEmail?: boolean | string
       templatesURL?: string
       helpCenterURL?: string

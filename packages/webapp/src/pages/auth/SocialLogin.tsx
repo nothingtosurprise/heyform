@@ -1,4 +1,4 @@
-import { IconBrandAppleFilled } from '@tabler/icons-react'
+import { IconBrandAppleFilled, IconLock } from '@tabler/icons-react'
 import { FC, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -9,6 +9,8 @@ import { Button, Divider } from '@/components'
 import {
   DISABLE_LOGIN_WITH_APPLE,
   DISABLE_LOGIN_WITH_GOOGLE,
+  DISABLE_LOGIN_WITH_OIDC,
+  OIDC_DISPLAY_NAME,
   isRegistrationDisabled
 } from '@/consts'
 
@@ -52,6 +54,17 @@ const SocialLogin: FC<SocialLoginProps> = ({ isSignUp }) => {
             </SocialIcon>
           )
         }
+      : null,
+    !DISABLE_LOGIN_WITH_OIDC
+      ? {
+          id: 'oidc',
+          label: OIDC_DISPLAY_NAME,
+          icon: (
+            <SocialIcon>
+              <IconLock size={18} aria-hidden="true" className="shrink-0" color="currentColor" />
+            </SocialIcon>
+          )
+        }
       : null
   ].filter(Boolean) as Array<{ id: string; label: string; icon: ReactNode }>
 
@@ -71,11 +84,15 @@ const SocialLogin: FC<SocialLoginProps> = ({ isSignUp }) => {
   return (
     <>
       <div className={providers.length === 1 ? 'grid grid-cols-1 gap-4' : 'grid grid-cols-2 gap-4'}>
-        {providers.map(provider => (
+        {providers.map((provider, index) => (
           <Button
             key={provider.id}
             variant="outline"
-            className="w-full"
+            className={
+              providers.length > 1 && providers.length % 2 === 1 && index === providers.length - 1
+                ? 'col-span-2 w-full'
+                : 'w-full'
+            }
             onClick={() => handleConnect(provider.id)}
           >
             {provider.icon}
