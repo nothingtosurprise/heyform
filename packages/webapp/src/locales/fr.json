@@ -743,6 +743,11 @@
         "label": "Entrez le code de suppression envoyé à <strong>{{email}}</strong>.",
         "required": "Le code de vérification ne doit pas être vide"
       },
+      "name": {
+        "label": "Saisissez le nom du projet <strong>{{name}}</strong> pour confirmer.",
+        "required": "Le nom du projet ne peut pas être vide",
+        "invalid": "Saisissez exactement {{name}} pour confirmer."
+      },
       "confirm": "Supprimer le projet"
     },
     "moveto": {

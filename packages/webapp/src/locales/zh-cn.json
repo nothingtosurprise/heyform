@@ -743,6 +743,11 @@
         "label": "请输入发送到 <strong>{{email}}</strong> 的删除代码。",
         "required": "验证码不能为空"
       },
+      "name": {
+        "label": "请输入项目名称 <strong>{{name}}</strong> 以确认。",
+        "required": "项目名称不能为空",
+        "invalid": "请准确输入 {{name}} 以确认。"
+      },
       "confirm": "删除项目"
     },
     "moveto": {

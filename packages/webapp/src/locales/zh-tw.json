@@ -743,6 +743,11 @@
         "label": "請輸入發送到 <strong>{{email}}</strong> 的刪除代碼。",
         "required": "驗證碼不能為空"
       },
+      "name": {
+        "label": "請輸入專案名稱 <strong>{{name}}</strong> 以確認。",
+        "required": "專案名稱不能為空",
+        "invalid": "請準確輸入 {{name}} 以確認。"
+      },
       "confirm": "刪除專案"
     },
     "moveto": {

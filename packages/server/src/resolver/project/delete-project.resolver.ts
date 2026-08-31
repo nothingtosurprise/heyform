@@ -30,12 +30,24 @@ export class DeleteProjectResolver {
       throw new BadRequestException("You don't have permission to delete the project")
     }
 
-    const attemptsKey = `limit:delete_project:${project.id}`
+    const isEmailConfirmation = this.mailService.isConfigured()
 
-    await this.authService.attemptsCheck(attemptsKey, async () => {
-      const key = `verify_delete_project:${project.id}`
-      await this.authService.checkVerificationCode(key, input.code)
-    })
+    if (isEmailConfirmation) {
+      const code = input.code
+
+      if (!code) {
+        throw new BadRequestException('The verification code is required')
+      }
+
+      const attemptsKey = `limit:delete_project:${project.id}`
+
+      await this.authService.attemptsCheck(attemptsKey, async () => {
+        const key = `verify_delete_project:${project.id}`
+        await this.authService.checkVerificationCode(key, code)
+      })
+    } else if (input.name !== project.name) {
+      throw new BadRequestException('The project name does not match')
+    }
 
     const forms = await this.formService.findAllInProject(project.id)
     const formIds = forms.map(form => form.id)
@@ -52,15 +64,17 @@ export class DeleteProjectResolver {
     await this.projectService.deleteAllMemberInProject(project.id)
     await this.projectService.delete(project.id)
 
-    this.mailService.projectDeletionAlert(
-      user.email,
-      {
-        teamName: team.name,
-        projectName: project.name,
-        userName: user.name
-      },
-      user.lang
-    )
+    if (isEmailConfirmation) {
+      this.mailService.projectDeletionAlert(
+        user.email,
+        {
+          teamName: team.name,
+          projectName: project.name,
+          userName: user.name
+        },
+        user.lang
+      )
+    }
 
     return true
   }

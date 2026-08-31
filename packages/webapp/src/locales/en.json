@@ -749,6 +749,11 @@
         "label": "Enter deletion code sent to <strong>{{email}}</strong>.",
         "required": "The verification code is not allow to be empty"
       },
+      "name": {
+        "label": "Enter the project name <strong>{{name}}</strong> to confirm.",
+        "required": "The project name cannot be empty",
+        "invalid": "Enter {{name}} exactly to confirm."
+      },
       "confirm": "Delete project"
     }
   },

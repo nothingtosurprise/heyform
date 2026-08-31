@@ -4,7 +4,7 @@ import { JobOptions, Queue } from 'bull'
 import { Dirent, readFileSync, readdirSync } from 'fs'
 import { basename, extname, join } from 'path'
 
-import { EMAIL_TEMPLATES_DIR, SMTP_FROM } from '@environments'
+import { EMAIL_TEMPLATES_DIR, SMTP_FROM, SMTP_HOST, SMTP_PORT } from '@environments'
 import { htmlUtils } from '@heyform-inc/answer-utils'
 import { helper } from '@heyform-inc/utils'
 
@@ -108,6 +108,12 @@ export class MailService {
 
   constructor(@InjectQueue('MailQueue') private readonly mailQueue: Queue) {
     this.init()
+  }
+
+  isConfigured(): boolean {
+    return Boolean(
+      SMTP_FROM?.trim() && SMTP_HOST?.trim() && Number.isInteger(SMTP_PORT) && SMTP_PORT > 0
+    )
   }
 
   async accountDeletionAlert(to: string, locale?: string) {

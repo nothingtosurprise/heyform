@@ -749,6 +749,11 @@
         "label": "Insira o código de exclusão enviado para <strong>{{email}}</strong>.",
         "required": "O código de verificação não pode ficar vazio"
       },
+      "name": {
+        "label": "Digite o nome do projeto <strong>{{name}}</strong> para confirmar.",
+        "required": "O nome do projeto não pode ficar vazio",
+        "invalid": "Digite exatamente {{name}} para confirmar."
+      },
       "confirm": "Excluir projeto"
     }
   },

@@ -743,6 +743,11 @@
         "label": "Wprowadź kod usunięcia wysłany na <strong>{{email}}</strong>.",
         "required": "Kod weryfikacyjny nie może być pusty"
       },
+      "name": {
+        "label": "Aby potwierdzić, wpisz nazwę projektu <strong>{{name}}</strong>.",
+        "required": "Nazwa projektu nie może być pusta",
+        "invalid": "Aby potwierdzić, wpisz dokładnie {{name}}."
+      },
       "confirm": "Usuń projekt"
     },
     "moveto": {

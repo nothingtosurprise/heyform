@@ -749,6 +749,11 @@
         "label": "Inserisci il codice di eliminazione inviato a <strong>{{email}}</strong>.",
         "required": "Il codice di verifica non può essere vuoto"
       },
+      "name": {
+        "label": "Inserisci il nome del progetto <strong>{{name}}</strong> per confermare.",
+        "required": "Il nome del progetto non può essere vuoto",
+        "invalid": "Inserisci esattamente {{name}} per confermare."
+      },
       "confirm": "Elimina progetto"
     }
   },

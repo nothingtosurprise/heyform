@@ -743,6 +743,11 @@
         "label": "<strong>{{email}}</strong> に送信された削除コードを入力してください。",
         "required": "確認コードは空欄にできません"
       },
+      "name": {
+        "label": "確認のため、プロジェクト名 <strong>{{name}}</strong> を入力してください。",
+        "required": "プロジェクト名は空欄にできません",
+        "invalid": "確認するには {{name}} と正確に入力してください。"
+      },
       "confirm": "プロジェクトを削除"
     },
     "moveto": {

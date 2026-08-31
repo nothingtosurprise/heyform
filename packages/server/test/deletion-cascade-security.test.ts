@@ -27,6 +27,7 @@ async function testDeletionCodeEmailsUseRateLimitedGeneration() {
     }
   }
   const mailService = {
+    isConfigured: () => true,
     accountDeletionRequest: async () => {
       emails.push('account')
     },
@@ -48,13 +49,17 @@ async function testDeletionCodeEmailsUseRateLimitedGeneration() {
     { id: 'user_1', email: 'owner@example.com', lang: 'en' } as any,
     { teamId: 'team_1' }
   )
-  await new DeleteProjectCodeResolver(authService as any, mailService as any).deleteProjectCode(
+  const isEmailConfirmation = await new DeleteProjectCodeResolver(
+    authService as any,
+    mailService as any
+  ).deleteProjectCode(
     { id: 'team_1', isOwner: true, name: 'Workspace' } as any,
     { id: 'project_1', name: 'Project' } as any,
     { id: 'user_1', email: 'owner@example.com', lang: 'en' } as any,
     { projectId: 'project_1' }
   )
 
+  assert.strictEqual(isEmailConfirmation, true)
   assert.deepStrictEqual(keys, [
     'user_deletion:user_1',
     'verify_dissolve_team:team_1',
@@ -119,6 +124,7 @@ async function testProjectDeletionDisablesAndPurgesFormsBeforeProject() {
       }
     } as any,
     {
+      isConfigured: () => true,
       projectDeletionAlert: () => {
         events.push('send alert')
       }
@@ -142,6 +148,83 @@ async function testProjectDeletionDisablesAndPurgesFormsBeforeProject() {
     'delete project',
     'send alert'
   ])
+}
+
+async function testProjectDeletionUsesNameWithoutSmtp() {
+  const events: string[] = []
+  const authService = {
+    getVerificationCodeWithRateLimit: async () => {
+      throw new Error('verification codes must not be generated without SMTP')
+    },
+    attemptsCheck: async () => {
+      throw new Error('verification codes must not be checked without SMTP')
+    }
+  }
+  const mailService = {
+    isConfigured: () => false,
+    projectDeletionRequest: async () => {
+      throw new Error('deletion codes must not be emailed without SMTP')
+    },
+    projectDeletionAlert: async () => {
+      throw new Error('deletion alerts must not be emailed without SMTP')
+    }
+  }
+  const team = { id: 'team_1', isOwner: true, name: 'Workspace' } as any
+  const project = { id: 'project_1', name: 'Project' } as any
+  const user = { email: 'owner@example.com', lang: 'en', name: 'Owner' } as any
+
+  const isEmailConfirmation = await new DeleteProjectCodeResolver(
+    authService as any,
+    mailService as any
+  ).deleteProjectCode(team, project, user, { projectId: project.id })
+
+  assert.strictEqual(isEmailConfirmation, false)
+
+  const resolver = new DeleteProjectResolver(
+    authService as any,
+    {
+      deleteAllMemberInProject: async () => {
+        events.push('delete project members')
+      },
+      delete: async () => {
+        events.push('delete project')
+      }
+    } as any,
+    {
+      findAllInProject: async () => {
+        events.push('find forms')
+        return []
+      },
+      updateMany: async () => {
+        throw new Error('forms must not be updated when none exist')
+      },
+      delete: async () => {
+        throw new Error('forms must not be deleted when none exist')
+      }
+    } as any,
+    {
+      deleteAll: async () => {
+        throw new Error('submissions must not be deleted when no forms exist')
+      }
+    } as any,
+    mailService as any
+  )
+
+  await assert.rejects(
+    resolver.deleteProject(team, project, user, {
+      projectId: project.id,
+      name: 'Wrong project'
+    }),
+    /The project name does not match/
+  )
+  assert.deepStrictEqual(events, [])
+
+  await resolver.deleteProject(team, project, user, {
+    projectId: project.id,
+    name: project.name
+  })
+
+  assert.deepStrictEqual(events, ['find forms', 'delete project members', 'delete project'])
 }
 
 async function testWorkspaceDeletionDisablesAndPurgesFormsBeforeWorkspace() {
@@ -280,6 +363,7 @@ async function run() {
   await testDeletionCodeEmailsUseRateLimitedGeneration()
   await testFindAllInProjectDoesNotExcludeActiveForms()
   await testProjectDeletionDisablesAndPurgesFormsBeforeProject()
+  await testProjectDeletionUsesNameWithoutSmtp()
   await testWorkspaceDeletionDisablesAndPurgesFormsBeforeWorkspace()
   await testAccountDeletionCleansOwnedWorkspaceBeforeUser()
 }
