@@ -60,7 +60,7 @@ Choosing our hosted version not only saves a significant amount of time and reso
 
 Interested in self-hosting HeyForm on your server? Take a look at the [self-hosting installation instructions](https://docs.heyform.net/open-source/self-hosting).
 
-To connect a self-hosted identity provider such as Authelia, Authentik, or Keycloak, see the [generic OpenID Connect setup guide](./docs/generic-oidc.md).
+To connect a self-hosted identity provider such as Authelia, Authentik, or Keycloak, see the [generic OpenID Connect setup guide](https://docs.heyform.net/open-source/configuration/oidc).
 
 ### One Click Deployment
 
