@@ -1,49 +1,79 @@
-FROM node:22.23.2-alpine3.23 AS base
+# syntax=docker/dockerfile:1
+
+ARG NODE_IMAGE=node:22.23.2-alpine3.23
+
+FROM ${NODE_IMAGE} AS toolchain
 
 ARG APP_PATH=/app
 WORKDIR $APP_PATH
 
-RUN npm install -g pnpm@9
+# Keep the package manager and native build toolchain in a shared layer. Both
+# dependency stages inherit this layer, while the final runtime image does not.
+RUN npm install -g pnpm@9.15.9
 RUN apk add --no-cache python3 make g++
 
-COPY package.json $APP_PATH/package.json
-COPY pnpm-lock.yaml $APP_PATH/pnpm-lock.yaml
-COPY pnpm-workspace.yaml $APP_PATH/pnpm-workspace.yaml
+FROM toolchain AS fetched
+
+ARG APP_PATH=/app
+
+# Fetching depends only on dependency metadata. Source-only changes can reuse
+# this layer and the BuildKit-backed pnpm store.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml $APP_PATH/
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm fetch --frozen-lockfile --store-dir=/pnpm/store
+
+FROM fetched AS build
+
+ARG APP_PATH=/app
+
+# Copy package manifests before source files so dependency installation remains
+# cached when application code changes.
+COPY packages/server/package.json $APP_PATH/packages/server/package.json
+COPY packages/webapp/package.json $APP_PATH/packages/webapp/package.json
+COPY packages/form-renderer/package.json $APP_PATH/packages/form-renderer/package.json
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --offline --frozen-lockfile --store-dir=/pnpm/store
+
 COPY packages/server $APP_PATH/packages/server
-RUN mkdir -p $APP_PATH/packages/server/static/upload
 COPY packages/webapp $APP_PATH/packages/webapp
 COPY packages/form-renderer $APP_PATH/packages/form-renderer
 COPY packages/server/view/index.html $APP_PATH/packages/webapp/index.html
 
-RUN pnpm install
+RUN mkdir -p $APP_PATH/packages/server/static/upload
 RUN pnpm build:server
 RUN pnpm build:webapp
-RUN mkdir -p $APP_PATH/packages/server/static
-RUN cp -R $APP_PATH/packages/webapp/dist/static/. $APP_PATH/packages/server/static/
-RUN cp $APP_PATH/packages/webapp/dist/index.html $APP_PATH/packages/server/view/index.html
+RUN mkdir -p $APP_PATH/packages/server/static && \
+    cp -R $APP_PATH/packages/webapp/dist/static/. $APP_PATH/packages/server/static/ && \
+    cp $APP_PATH/packages/webapp/dist/index.html $APP_PATH/packages/server/view/index.html
 
-FROM node:22.23.2-alpine3.23 AS runner
+FROM fetched AS prod-deps
+
+ARG APP_PATH=/app
+ENV NODE_ENV=production
+
+COPY packages/server/package.json $APP_PATH/packages/server/package.json
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+    pnpm install --prod --offline --frozen-lockfile --force \
+      --filter ./packages/server... --store-dir=/pnpm/store
+
+FROM ${NODE_IMAGE} AS runner
 
 ARG APP_PATH=/app
 ENV NODE_ENV=production
 WORKDIR $APP_PATH
 
-RUN npm install -g pnpm@9
-RUN apk add --no-cache python3 make g++
+# Only production dependencies and build output enter the runtime image. pnpm,
+# Python, make, and g++ remain in the intermediate stages.
+COPY --from=prod-deps $APP_PATH/node_modules $APP_PATH/node_modules
+COPY --from=prod-deps $APP_PATH/packages/server/package.json $APP_PATH/packages/server/package.json
+COPY --from=prod-deps $APP_PATH/packages/server/node_modules $APP_PATH/packages/server/node_modules
 
-COPY package.json $APP_PATH/package.json
-COPY pnpm-lock.yaml $APP_PATH/pnpm-lock.yaml
-COPY packages/server/package.json $APP_PATH/packages/server/package.json
-
-RUN printf "packages:\n  - 'packages/server'\n" > $APP_PATH/pnpm-workspace.yaml
-RUN pnpm install --prod --frozen-lockfile --filter ./packages/server...
-
-COPY --from=base $APP_PATH/packages/server/dist $APP_PATH/packages/server/dist
-COPY --from=base $APP_PATH/packages/server/resources $APP_PATH/packages/server/resources
-COPY --from=base $APP_PATH/packages/server/static $APP_PATH/packages/server/static
-COPY --from=base $APP_PATH/packages/server/view $APP_PATH/packages/server/view
-COPY --from=base $APP_PATH/packages/server/src $APP_PATH/packages/server/src
-COPY --from=base $APP_PATH/packages/server/tsconfig.json $APP_PATH/packages/server/tsconfig.json
+COPY --from=build $APP_PATH/packages/server/dist $APP_PATH/packages/server/dist
+COPY --from=build $APP_PATH/packages/server/resources $APP_PATH/packages/server/resources
+COPY --from=build $APP_PATH/packages/server/static $APP_PATH/packages/server/static
+COPY --from=build $APP_PATH/packages/server/view $APP_PATH/packages/server/view
+COPY --from=build $APP_PATH/packages/server/src $APP_PATH/packages/server/src
+COPY --from=build $APP_PATH/packages/server/tsconfig.json $APP_PATH/packages/server/tsconfig.json
 
 WORKDIR $APP_PATH/packages/server
 RUN test -f ./dist/main.js || test -f ./dist/src/main.js || test -f ./dist/packages/server/main.js
