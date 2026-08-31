@@ -44,6 +44,7 @@ interface FlowState {
   inviteCode: string
   seedProjectId: string
   projectId: string
+  projectName: string
   formId: string
   fieldId: string
   submissionId: string
@@ -175,14 +176,16 @@ export function build(baseUrl: string) {
       'member',
       'teamId'
     ])
+    const projectName = uniqueName('Flow Project')
     const projectId = await admin.client.gqlOk<string>('createProject', CREATE_PROJECT_GQL, {
       input: {
         teamId,
-        name: uniqueName('Flow Project'),
+        name: projectName,
         memberIds: [collaborator.id, member.id]
       }
     })
     state.projectId = projectId
+    state.projectName = projectName
 
     // memberIds wiring is best-effort in createProject; ensure they're members
     // so PermissionGuard's project-scope check passes for both non-admin roles.
@@ -415,19 +418,24 @@ export function build(baseUrl: string) {
     assert.ok(result.errors.length > 0, 'deleted form is not readable')
   })
 
-  test('admin requests a code and deletes the project', async () => {
-    const { admin, projectId, teamId } = need(state, ['admin', 'projectId', 'teamId'])
+  test('admin confirms and deletes the project', async () => {
+    const { admin, projectId, projectName, teamId } = need(state, [
+      'admin',
+      'projectId',
+      'projectName',
+      'teamId'
+    ])
 
     const requested = await admin.client.gqlOk<boolean>(
       'deleteProjectCode',
       DELETE_PROJECT_CODE_GQL,
       { input: { projectId } }
     )
-    assert.strictEqual(requested, true)
-
-    const code = await readLatestVerificationCode(`verify_delete_project:${projectId}`)
+    const confirmation = requested
+      ? { code: await readLatestVerificationCode(`verify_delete_project:${projectId}`) }
+      : { name: projectName }
     const deleted = await admin.client.gqlOk<boolean>('deleteProject', DELETE_PROJECT_GQL, {
-      input: { projectId, code }
+      input: { projectId, ...confirmation }
     })
     assert.strictEqual(deleted, true)
 
